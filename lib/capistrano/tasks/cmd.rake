@@ -22,7 +22,7 @@ namespace :runit do
       array = []
       array << env_variables
       array << "RAILS_ENV=#{fetch(:rails_env)}"
-      array << "exec #{cmd}"
+      array << "exec #{SSHKit.config.command_map[:bundle]} exec #{cmd}"
       array.compact.join(' ')
     end
 
