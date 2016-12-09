@@ -1,7 +1,7 @@
 include ::Capistrano::Runit
 
 namespace :load do
-  cmd :defaults do
+  task :defaults do
     set :runit_cmd_run_template, nil
     set :runit_cmd_default_hooks, -> { true }
     set :runit_cmd_role, -> { :app }
@@ -28,65 +28,65 @@ namespace :runit do
 
     def generate_namespace_for_cmd(name, cmd, parent_task)
       my_namespace = "runit:cmd:#{name}"
-      parent_cmd.application.define_task Rake::Task, "#{my_namespace}:setup" do
-        setup_service("cmd_#{name}", collect_cmd_run_command(cmd_name))
+      parent_task.application.define_task Rake::Task, "#{my_namespace}:setup" do
+        setup_service("cmd_#{name}", collect_cmd_run_command(cmd))
       end
-      parent_cmd.application.define_task Rake::Task, "#{my_namespace}:enable" do
+      parent_task.application.define_task Rake::Task, "#{my_namespace}:enable" do
         enable_service("cmd_#{name}")
       end
-      parent_cmd.application.define_task Rake::Task, "#{my_namespace}:disable" do
+      parent_task.application.define_task Rake::Task, "#{my_namespace}:disable" do
         disable_service("cmd_#{name}")
       end
-      parent_cmd.application.define_task Rake::Task, "#{my_namespace}:start" do
+      parent_task.application.define_task Rake::Task, "#{my_namespace}:start" do
         start_service("cmd_#{name}")
       end
-      parent_cmd.application.define_task Rake::Task, "#{my_namespace}:stop" do
+      parent_task.application.define_task Rake::Task, "#{my_namespace}:stop" do
         on roles fetch("runit_cmd_#{name}_role".to_sym) do
           runit_execute_command("cmd_#{name}", 'down')
         end
       end
-      parent_cmd.application.define_task Rake::Task, "#{my_namespace}:restart" do
+      parent_task.application.define_task Rake::Task, "#{my_namespace}:restart" do
         restart_service("cmd_#{name}")
       end
     end
 
-    cmd :add_default_hooks do
+    task :add_default_hooks do
       after 'deploy:check', 'runit:cmd:check'
       after 'deploy:updated', 'runit:cmd:stop'
       after 'deploy:reverted', 'runit:cmd:stop'
       after 'deploy:published', 'runit:cmd:start'
     end
 
-    cmd :hook do |task|
-      fetch(:runit_cmd_cmds).each do |key, value|
+    task :hook do |task|
+      fetch(:runit_cmds).each do |key, value|
         name = key.gsub(/\s*[^A-Za-z0-9\.\-]\s*/, '_')
         set "runit_cmd_#{name}_role".to_sym, -> { :app }
         generate_namespace_for_cmd(name, value, task)
       end
     end
 
-    cmd :check do
+    task :check do
       fetch(:runit_cmds).each do |key, value|
         name = key.gsub(/\s*[^A-Za-z0-9\.\-]\s*/, '_')
         check_service('cmd', name)
       end
     end
 
-    cmd :stop do
+    task :stop do
       fetch(:runit_cmds).each do |key, value|
         name = key.gsub(/\s*[^A-Za-z0-9\.\-]\s*/, '_')
         ::Rake::Task["runit:cmd:#{name}:stop"].invoke
       end
     end
 
-    cmd :start do
+    task :start do
       fetch(:runit_cmds).each do |key, value|
         name = key.gsub(/\s*[^A-Za-z0-9\.\-]\s*/, '_')
         ::Rake::Task["runit:cmd:#{name}:start"].invoke
       end
     end
 
-    cmd :restart do
+    task :restart do
       fetch(:runit_cmds).each do |key, value|
         name = key.gsub(/\s*[^A-Za-z0-9\.\-]\s*/, '_')
         ::Rake::Task["runit:cmd:#{name}:restart"].invoke
